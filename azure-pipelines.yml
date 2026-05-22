@@ -1,0 +1,69 @@
+trigger:
+- main  # Runs automatically whenever you push code updates to your main branch
+
+pool:
+  vmImage: 'ubuntu-latest' # The temporary DevOps build runner environment
+
+stages:
+- stage: Build
+  displayName: 'Pack Application Artifact'
+  jobs:
+  - job: PackageCode
+    steps:
+    - task: ArchiveFiles@2
+      displayName: 'Zip Application Source Files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/myecomm-app.zip'
+        replaceExistingArchive: true
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Upload Artifact to Azure DevOps Storage'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/myecomm-app.zip'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: Deploy
+  displayName: 'Deploy to Infrastructure Pool'
+  dependsOn: Build
+  jobs:
+  - job: DistributeToVMs
+    steps:
+    - task: DownloadBuildArtifacts@1
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+        downloadPath: '$(System.ArtifactsDirectory)'
+
+    # 1. Securely Copy the Code Files onto your Servers via the Load Balancer
+    - task: CopyFilesOverSSH@0
+      displayName: 'Securely Transfer Files to Target Subdirectory'
+      inputs:
+        sshEndpoint: 'VMSS-SSH-Conn1' # The exact service connection name we made in Step 1
+        sourceFolder: '$(System.ArtifactsDirectory)/drop'
+        contents: 'myecomm-app.zip'
+        targetFolder: '/var/www/myecomm'
+        cleanTargetFolder: false
+        overwrite: true
+
+    # 2. Run Commands inside the instances to unzip and kickstart your application
+    - task: SSH@0
+      displayName: 'Extract Code and Restart Web Server App'
+      inputs:
+        sshEndpoint: 'VMSS-SSH-Conn1'
+        runOptions: 'inline'
+        inlineScript: |
+          cd /var/www/myecomm
+          sudo apt-get install -y unzip
+          sudo unzip -o myecomm-app.zip
+          sudo rm -f myecomm-app.zip
+          
+          # Force terminate any old lingering runs of the script
+          sudo pkill -f app.py || true
+          
+          # Start your fresh application tracking output inside a log file
+          sudo nohup python3 /var/www/myecomm/app.py > /var/www/myecomm/app.log 2>&1 &
