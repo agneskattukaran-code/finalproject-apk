@@ -7,7 +7,7 @@ app = Flask(__name__)
 # Replace the placeholders with your actual Azure SQL details
 server = 'server-apk.database.windows.net'
 database = 'db-apk'
-username = 'sqluserapk'
+username = 'adminapk'
 password = 'Agnespaul1234' # Use the password you set in the portal
 driver = '{ODBC Driver 18 for SQL Server}'
 
