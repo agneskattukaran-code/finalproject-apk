@@ -2,7 +2,7 @@ trigger:
 - main  # Runs automatically whenever you push code updates to your main branch
 
 pool:
-  vmImage: 'ubuntu-latest' # The temporary DevOps build runner environment
+  vmImage: 'ubuntu-latest' # The temporary DevOps build runner environments
 
 stages:
 - stage: Build
