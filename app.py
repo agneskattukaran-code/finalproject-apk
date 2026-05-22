@@ -3,7 +3,7 @@ from flask import Flask
 
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION ----
 # Replace the placeholders with your actual Azure SQL details
 server = 'server-apk.database.windows.net'
 database = 'db-apk'
